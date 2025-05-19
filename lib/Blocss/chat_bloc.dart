@@ -11,18 +11,38 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   ChatBloc(this.geminiService) : super(ChatInitial()) {
     on<SendMessageEvent>(_onSendMessage);
+    on<TypeBotMessageEvent>(_onTypeBotMessage);
   }
 
   void _onSendMessage(SendMessageEvent event, Emitter<ChatState> emit) async {
     _messages.add(Message(text: event.userInput, isUser: true));
     emit(ChatLoaded(List.from(_messages)));
 
+    emit (ChatLoading(List.from(_messages)));
+
     try {
-      final response = await geminiService.sendMessage(event.userInput);
-      _messages.add(Message(text: response, isUser: false));
-      emit(ChatLoaded(List.from(_messages)));
+     final response = await geminiService.sendMessage(event.userInput);
+      add(TypeBotMessageEvent(response)); 
     } catch (e) {
-      emit(ChatError(e.toString()));
+      emit(ChatError(e.toString()));  
     }
   }
+
+
+
+  Future<void> _onTypeBotMessage(TypeBotMessageEvent event, Emitter<ChatState> emit) async {
+  String currentText = '';
+  for (int i = 0; i < event.fullText.length; i++) {
+    await Future.delayed(const Duration(milliseconds: 30)); // typing speed
+    currentText += event.fullText[i];
+
+    if (_messages.isNotEmpty && !_messages.last.isUser) {
+      _messages.removeLast();
+    }
+
+    _messages.add(Message(text: currentText, isUser: false));
+    emit(ChatLoaded(List.from(_messages)));
+  }
+}
+
 }
