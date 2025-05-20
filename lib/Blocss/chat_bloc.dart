@@ -18,31 +18,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _messages.add(Message(text: event.userInput, isUser: true));
     emit(ChatLoaded(List.from(_messages)));
 
-    emit (ChatLoading(List.from(_messages)));
+    emit(ChatLoading(List.from(_messages)));
 
     try {
-     final response = await geminiService.sendMessage(event.userInput);
-      add(TypeBotMessageEvent(response)); 
+      final response = await geminiService.sendMessage(event.userInput);
+      add(TypeBotMessageEvent(response));
     } catch (e) {
-      emit(ChatError(e.toString()));  
+      emit(ChatError(e.toString()));
     }
   }
 
+  Future<void> _onTypeBotMessage(
+    TypeBotMessageEvent event, Emitter<ChatState> emit) async {
+    String currentText = '';
+    for (int i = 0; i < event.fullText.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 30));
+      currentText += event.fullText[i];
 
+      if (_messages.isNotEmpty && !_messages.last.isUser) {
+        _messages.removeLast();
+      }
 
-  Future<void> _onTypeBotMessage(TypeBotMessageEvent event, Emitter<ChatState> emit) async {
-  String currentText = '';
-  for (int i = 0; i < event.fullText.length; i++) {
-    await Future.delayed(const Duration(milliseconds: 30)); // typing speed
-    currentText += event.fullText[i];
-
-    if (_messages.isNotEmpty && !_messages.last.isUser) {
-      _messages.removeLast();
+      _messages.add(Message(text: currentText, isUser: false));
+      emit(ChatLoaded(List.from(_messages)));
     }
-
-    _messages.add(Message(text: currentText, isUser: false));
-    emit(ChatLoaded(List.from(_messages)));
   }
-}
-
 }

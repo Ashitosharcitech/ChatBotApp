@@ -16,10 +16,10 @@ class GeminiService {
         "contents": [
           {
             "parts": [
-              {"text": prompt}
-            ]
-          }
-        ]
+              {"text": prompt},
+            ],
+          },
+        ],
       }),
     );
 

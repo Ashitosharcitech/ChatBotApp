@@ -3,6 +3,7 @@ import 'package:chat_bot_app/Screenss/chat_screen.dart';
 import 'package:chat_bot_app/Service/gemini_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 void main() {
   runApp(const GeminiApp());
 }
