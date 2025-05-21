@@ -7,7 +7,7 @@ import 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final GeminiService geminiService;
-  List<Message> _messages = [];
+  final List<Message> _messages = [];
 
   ChatBloc(this.geminiService) : super(ChatInitial()) {
     on<SendMessageEvent>(_onSendMessage);

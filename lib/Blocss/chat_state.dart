@@ -1,6 +1,5 @@
 import 'package:chat_bot_app/modelss/message.dart';
 
-import '../modelss/message.dart';
 
 abstract class ChatState {}
 
