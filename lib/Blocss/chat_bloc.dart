@@ -1,4 +1,6 @@
+import 'package:chat_bot_app/Service/firebase_services.dart';
 import 'package:chat_bot_app/Service/gemini_service.dart';
+// import 'package:chat_bot_app/Service/firebase_service.dart';
 import 'package:chat_bot_app/modelss/message.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../modelss/message.dart';
@@ -7,12 +9,22 @@ import 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final GeminiService geminiService;
+    final FirebaseService firebaseService;
   final List<Message> _messages = [];
 
-  ChatBloc(this.geminiService) : super(ChatInitial()) {
+  ChatBloc(this.geminiService, this.firebaseService) : super(ChatInitial()) {
     on<SendMessageEvent>(_onSendMessage);
     on<TypeBotMessageEvent>(_onTypeBotMessage);
+
+     on<LoadPreviousChatEvent>((event, emit) {
+      _messages.clear();
+      _messages.add(Message(text: event.userInput, isUser: true));
+      _messages.add(Message(text: event.botResponse, isUser: false));
+      emit(ChatLoaded(List.from(_messages)));
+    });
   }
+
+  
 
   void _onSendMessage(SendMessageEvent event, Emitter<ChatState> emit) async {
     _messages.add(Message(text: event.userInput, isUser: true));
@@ -22,6 +34,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       final response = await geminiService.sendMessage(event.userInput);
+       await firebaseService.saveMessage(event.userInput, response);
       add(TypeBotMessageEvent(response));
     } catch (e) {
       emit(ChatError(e.toString()));

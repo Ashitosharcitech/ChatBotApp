@@ -123,13 +123,21 @@
 import 'package:chat_bot_app/Blocss/chat_bloc.dart';
 import 'package:chat_bot_app/Blocss/chat_event.dart';
 import 'package:chat_bot_app/Blocss/chat_state.dart';
+import 'package:chat_bot_app/Service/firebase_services.dart';
+import 'package:chat_bot_app/modelss/message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../utils/text_utils.dart'; // adjust the path if needed
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String? previousUserMessage;
+  final String? previousBotResponse;
+  const ChatScreen({
+    Key? key,
+    this.previousUserMessage,
+    this.previousBotResponse,
+  }) : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -144,14 +152,23 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-
+    if (widget.previousUserMessage != null &&
+        widget.previousBotResponse != null) {
+      final chatBloc = context.read<ChatBloc>();
+      chatBloc.add(
+        LoadPreviousChatEvent(
+          widget.previousUserMessage!,
+          widget.previousBotResponse!,
+        ),
+      );
+    }
     _scrollController.addListener(() {
       if (!_scrollController.hasClients) return;
 
       final position = _scrollController.position;
       final distanceFromBottom = position.maxScrollExtent - position.pixels;
 
-      const threshold = 150.0;
+      const threshold = 20.0;
 
       if (distanceFromBottom > threshold) {
         setState(() {
@@ -179,25 +196,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  // void _scrollToBottom({bool force = false}) {
-  //   Future.delayed(const Duration(milliseconds: 100), () {
-  //     if (_scrollController.hasClients) {
-  //       final threshold = 200.0; // pixels from bottom
-  //       final position = _scrollController.position;
-  //       final isNearBottom =
-  //           position.maxScrollExtent - position.pixels < threshold;
-
-  //       if (force || isNearBottom) {
-  //         _scrollController.animateTo(
-  //           position.maxScrollExtent,
-  //           duration: const Duration(milliseconds: 300),
-  //           curve: Curves.easeOut,
-  //         );
-  //       }
-  //     }
-  //   });
-  // }
-
   @override
   void dispose() {
     _controller.dispose();
@@ -205,10 +203,65 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Center(child: Text("ChatBot App"))),
+      appBar: AppBar(
+        title: const Text("ChatBot App"),
+        leading: Builder(
+          builder: (context) {
+            return IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            );
+          },
+        ),
+      ),
+      drawer: Drawer(
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: FirebaseService().getChatHistory(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text("No history found."));
+            }
+
+            final history = snapshot.data!;
+            return ListView.builder(
+              itemCount: history.length,
+              itemBuilder: (context, index) {
+                final item = history[index];
+                return ListTile(
+                  title: Text("${item['userMessage']}"),
+                  // subtitle: Text("Bot: ${item['botResponse'].split('.').first}"), // shows only the first sentence
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder:
+                            (context) => BlocProvider.value(
+                              value:
+                                  context
+                                      .read<
+                                        ChatBloc
+                                      >(), // ⬅️ Reuse the existing ChatBloc
+                              child: ChatScreen(
+                                previousUserMessage: item['userMessage'],
+                                previousBotResponse: item['botResponse'],
+                              ),
+                            ),
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
+      ),
+
       body: Stack(
         children: [
           Column(
@@ -224,41 +277,55 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (state is ChatInitial) {
                       return const Center(child: Text("What Can I Help You"));
                     } else if (state is ChatLoaded || state is ChatLoading) {
-                      final messages = state is ChatLoaded
-                          ? state.messages
-                          : (state as ChatLoading).messages;
+                      final messages =
+                          state is ChatLoaded
+                              ? state.messages
+                              : (state as ChatLoading).messages;
 
                       return ListView.builder(
                         controller: _scrollController,
-                        itemCount: messages.length + (state is ChatLoading ? 1 : 0),
+                        itemCount:
+                            messages.length + (state is ChatLoading ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index < messages.length) {
                             final message = messages[index];
                             return Align(
-                              alignment: message.isUser
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
+                              alignment:
+                                  message.isUser
+                                      ? Alignment.centerRight
+                                      : Alignment.centerLeft,
                               child: Container(
                                 margin: const EdgeInsets.symmetric(
-                                    vertical: 5, horizontal: 10),
+                                  vertical: 5,
+                                  horizontal: 10,
+                                ),
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: message.isUser
-                                      ? Colors.blue[100]
-                                      : const Color.fromARGB(248, 233, 231, 231),
+                                  color:
+                                      message.isUser
+                                          ? Colors.blue[100]
+                                          : const Color.fromARGB(
+                                            248,
+                                            233,
+                                            231,
+                                            231,
+                                          ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: message.isUser
-                                    ? Text(message.text)
-                                    : MarkdownBody(
-                                        data: highlightImportantWords(message.text),
-                                        styleSheet: MarkdownStyleSheet(
-                                          p: const TextStyle(fontSize: 18),
-                                          strong: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                child:
+                                    message.isUser
+                                        ? Text(message.text)
+                                        : MarkdownBody(
+                                          data: highlightImportantWords(
+                                            message.text,
+                                          ),
+                                          styleSheet: MarkdownStyleSheet(
+                                            p: const TextStyle(fontSize: 18),
+                                            strong: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                      ),
                               ),
                             );
                           } else {
@@ -266,7 +333,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               alignment: Alignment.centerLeft,
                               child: Container(
                                 margin: const EdgeInsets.symmetric(
-                                    vertical: 5, horizontal: 10),
+                                  vertical: 5,
+                                  horizontal: 10,
+                                ),
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
@@ -322,16 +391,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
           // 🟢 Scroll to bottom button
           if (_showScrollToBottomBtn)
-            Positioned(
-              bottom: 90,
-              right: 230,
-              // left: 0,
-              child: FloatingActionButton.small(
-                onPressed: () {
-                  _isAutoScrollEnabled = true;
-                  _scrollToBottom(force: true);
-                },
-                child: const Icon(Icons.arrow_downward),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 90),
+                child: FloatingActionButton.small(
+                  onPressed: () {
+                    _isAutoScrollEnabled = true;
+                    _scrollToBottom(force: true);
+                  },
+                  child: const Icon(Icons.arrow_downward),
+                ),
               ),
             ),
         ],
