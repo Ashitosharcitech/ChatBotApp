@@ -120,15 +120,19 @@
 //   }
 // }
 
+import 'dart:math';
+
 import 'package:chat_bot_app/Blocss/chat_bloc.dart';
 import 'package:chat_bot_app/Blocss/chat_event.dart';
 import 'package:chat_bot_app/Blocss/chat_state.dart';
+import 'package:chat_bot_app/Screenss/chat_session_loader.dart';
 import 'package:chat_bot_app/Service/firebase_services.dart';
 import 'package:chat_bot_app/modelss/message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../utils/text_utils.dart'; // adjust the path if needed
+import 'package:chat_bot_app/Service/auth_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? previousUserMessage;
@@ -136,7 +140,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     Key? key,
     this.previousUserMessage,
-    this.previousBotResponse,
+    this.previousBotResponse, required friendId, required String chatId,
   }) : super(key: key);
 
   @override
@@ -157,8 +161,9 @@ class _ChatScreenState extends State<ChatScreen> {
       final chatBloc = context.read<ChatBloc>();
       chatBloc.add(
         LoadPreviousChatEvent(
-          widget.previousUserMessage!,
-          widget.previousBotResponse!,
+          sessionId: widget.toString(),
+          previousUserMessage: widget.previousUserMessage!,
+          previousBotResponse: widget.previousBotResponse!,
         ),
       );
     }
@@ -211,52 +216,73 @@ class _ChatScreenState extends State<ChatScreen> {
         leading: Builder(
           builder: (context) {
             return IconButton(
-              icon: const Icon(Icons.history),
+              icon: const Icon(Icons.menu),
               onPressed: () => Scaffold.of(context).openDrawer(),
             );
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.create),
+            tooltip: "Start New Chat ",
+            onPressed: () {
+              context.read<ChatBloc>().add(
+                ClearChatEvent(userInput: 'New Chat'),
+              );
+            },
+          ),
+        ],
       ),
       drawer: Drawer(
         child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: FirebaseService().getChatHistory(),
+          future: FirebaseService().getAllSessions(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}"));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text("No history found."));
             }
 
-            final history = snapshot.data!;
-            return ListView.builder(
-              itemCount: history.length,
-              itemBuilder: (context, index) {
-                final item = history[index];
-                return ListTile(
-                  title: Text("${item['userMessage']}"),
-                  // subtitle: Text("Bot: ${item['botResponse'].split('.').first}"), // shows only the first sentence
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder:
-                            (context) => BlocProvider.value(
-                              value:
-                                  context
-                                      .read<
-                                        ChatBloc
-                                      >(), // ⬅️ Reuse the existing ChatBloc
-                              child: ChatScreen(
-                                previousUserMessage: item['userMessage'],
-                                previousBotResponse: item['botResponse'],
-                              ),
+            final sessions = snapshot.data!;
+
+            return ListView(
+              padding: const EdgeInsets.only(top: 80, left: 16, right: 16),
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'All History',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ...sessions.map((session) {
+                  return Column(
+                    children: [
+                      ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        // tileColor: Colors.grey[100],
+                        title: Text(
+                          session['title'] ?? 'Unnamed Session',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 20,),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ChatSessionLoader(
+                                    sessionId: session['sessionId'],
+                                  ),
                             ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                );
-              },
+                      const SizedBox(height: 10),
+                    ],
+                  );
+                }).toList(),
+              ],
             );
           },
         ),
@@ -294,41 +320,80 @@ class _ChatScreenState extends State<ChatScreen> {
                                   message.isUser
                                       ? Alignment.centerRight
                                       : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                  vertical: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
+                                  vertical: 12,
                                 ),
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color:
+                                child: Column(
+                                  crossAxisAlignment:
                                       message.isUser
-                                          ? Colors.blue[100]
-                                          : const Color.fromARGB(
-                                            248,
-                                            233,
-                                            231,
-                                            231,
-                                          ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child:
-                                    message.isUser
-                                        ? Text(message.text)
-                                        : MarkdownBody(
-                                          data: highlightImportantWords(
-                                            message.text,
-                                          ),
-                                          styleSheet: MarkdownStyleSheet(
-                                            p: const TextStyle(fontSize: 18),
-                                            strong: const TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start,
+                                  children: [
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                message.isUser
+                                                    ? const Color.fromARGB(
+                                                      255,
+                                                      220,
+                                                      236,
+                                                      249,
+                                                    )
+                                                    : const Color.fromARGB(
+                                                      248,
+                                                      233,
+                                                      231,
+                                                      231,
+                                                    ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
                                             ),
                                           ),
+                                          child:
+                                              message.isUser
+                                                  ? Text(message.text)
+                                                  : MarkdownBody(
+                                                    data: message.text,
+                                                  ),
                                         ),
+                                        if (message.isUser)
+                                          Positioned(
+                                            bottom: -30,
+                                            right: -12,
+                                            child: IconButton(
+                                              icon: const Icon(
+                                                Icons.edit,
+                                                size: 18,
+                                              ),
+                                              tooltip: "Edit message",
+                                              onPressed: () {
+                                                _controller.text = message.text;
+                                                _controller.selection =
+                                                    TextSelection.fromPosition(
+                                                      TextPosition(
+                                                        offset:
+                                                            _controller
+                                                                .text
+                                                                .length,
+                                                      ),
+                                                    );
+                                              },
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           } else {
+                            // Show "Thinking..." during loading
                             return Align(
                               alignment: Alignment.centerLeft,
                               child: Container(
@@ -338,6 +403,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
+                                  color: const Color.fromARGB(
+                                    248,
+                                    233,
+                                    231,
+                                    231,
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Text(
