@@ -243,45 +243,64 @@ class _ChatScreenState extends State<ChatScreen> {
 
             final sessions = snapshot.data!;
 
-            return ListView(
-              padding: const EdgeInsets.only(top: 80, left: 16, right: 16),
+            return Column(
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'All History',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.only(top: 80, left: 16, right: 16),
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          'All History',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      ...sessions.map((session) {
+                        return Column(
+                          children: [
+                            ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              // tileColor: Colors.grey[100],
+                              title: Text(
+                                session['title'] ?? 'Unnamed Session',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              trailing: const Icon(Icons.arrow_forward_ios, size: 20,),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => ChatSessionLoader(
+                                          sessionId: session['sessionId'],
+                                        ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        );
+                      }).toList(),
+                    ],
                   ),
                 ),
-                ...sessions.map((session) {
-                  return Column(
-                    children: [
-                      ListTile(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        // tileColor: Colors.grey[100],
-                        title: Text(
-                          session['title'] ?? 'Unnamed Session',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 20,),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => ChatSessionLoader(
-                                    sessionId: session['sessionId'],
-                                  ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                  );
-                }).toList(),
+                const Divider(),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: ListTile(
+                  leading: const Icon(Icons.logout),
+                  title: const Text("Logout"),
+                  onTap: () async{
+                    await AuthService().signOut();
+                    Navigator.of(context).pop();
+                    // Optionally navigate to login screen
+                // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+                  },
+                ),
+                )
               ],
             );
           },
