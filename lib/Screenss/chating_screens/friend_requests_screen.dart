@@ -2,36 +2,62 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class UserListScreen extends StatelessWidget {
+class FriendRequestScreen extends StatelessWidget {
   final currentUser = FirebaseAuth.instance.currentUser;
 
-  void sendFriendRequest(String toUserId) {
-    FirebaseFirestore.instance.collection('friend_requests').add({
-      'from': currentUser!.uid,
-      'to': toUserId,
-      'status': 'pending',
+  void acceptRequest(String requestId, String fromUserId) async {
+    // final chatId = generateChatId(curruntUser!.uid, fromUserId);
+    // Update request status
+    await FirebaseFirestore.instance.collection('friend_requests').doc(requestId).update({
+      'status': 'accepted',
+    });
+
+    // Save as friends
+    await FirebaseFirestore.instance.collection('friends').add({
+      'user1': currentUser!.uid,
+      'user2': fromUserId,
+      // 'chatId': chatId,
     });
   }
+
+  String generateChatId(String uid1, String uid2) {
+  return uid1.hashCode <= uid2.hashCode ? '$uid1\_$uid2' : '$uid2\_$uid1';
+}
+
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('All Users')),
+      appBar: AppBar(title: Text('Friend Requests')),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('friend_requests')
+            .where('to', isEqualTo: currentUser!.uid)
+            .where('status', isEqualTo: 'pending')
+            .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return CircularProgressIndicator();
-          final users = snapshot.data!.docs;
+          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+          final requests = snapshot.data!.docs;
+
+          if (requests.isEmpty) {
+            return Center(child: Text('No friend requests'));
+          }
+
+
           return ListView.builder(
-            itemCount: users.length,
+            itemCount: requests.length,
             itemBuilder: (context, index) {
-              final user = users[index];
-              if (user.id == currentUser!.uid) return Container();
+              final req = requests[index];
+              final fromId = req['from'];
+              final fromName = req['fromName'] ?? 'unknown User';
+
               return ListTile(
-                title: Text(user['name']),
+                title: Text('$fromName'),
+                // subtitle: Text('UID: $fromId'),
                 trailing: ElevatedButton(
-                  onPressed: () => sendFriendRequest(user.id),
-                  child: Text('Send Request'),
+                  onPressed: () => acceptRequest(req.id, fromId),
+                  child: Text('Accept'),
                 ),
               );
             },
@@ -41,3 +67,6 @@ class UserListScreen extends StatelessWidget {
     );
   }
 }
+
+
+
