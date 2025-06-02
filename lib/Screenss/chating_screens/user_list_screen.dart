@@ -1,6 +1,5 @@
-// 
 
-import 'package:chat_bot_app/users_bloc/user_list.bloc.dart';
+import 'package:chat_bot_app/users_bloc/user_list_bloc.dart';
 import 'package:chat_bot_app/users_bloc/user_list_event.dart';
 import 'package:chat_bot_app/users_bloc/user_list_state.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,8 +33,10 @@ class UserListScreen extends StatelessWidget {
                         .collection('users')
                         .doc(currentUser!.uid)
                         .get();
+
                         final fromName = currentUserDoc['name'] ?? 'Unknown';
-                         print('Sending friend request from: $fromName'); // ✅ DEBUG
+                        
+                          print('Sending friend request from: $fromName'); // ✅ DEBUG  
                         context
                             .read<UserListBloc>()
                             .add(SendFriendRequestEvent(user['id'], fromName),

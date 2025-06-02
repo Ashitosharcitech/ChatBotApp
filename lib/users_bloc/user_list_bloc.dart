@@ -44,26 +44,7 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
           .where('to', isEqualTo: event.toUserId)
           .get();
 
-      if (existing.docs.isNotEmpty) {
-
-        final doc = existing.docs.first;
-        final status = doc['status'];
-
-        if (status == 'pending'){
-          print("Request already pending");
-          return;
-        }else if (status == 'accepted'){
-          print('already your friend');
-          return;
-        }else if (status == 'rejected'){
-          await _firestore.collection('friend_requests').doc(doc.id).update({
-            'status' : 'pending',
-            'timestamp' : FieldValue.serverTimestamp()
-          });
-          print('friend request re-sent');
-          return;
-        }
-      }
+      if (existing.docs.isEmpty) {
         await _firestore.collection('friend_requests').add({
           'from': currentUser.uid,
           'fromName': event.fromName, 
@@ -71,9 +52,8 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
           'status': 'pending',
           'timestamp': FieldValue.serverTimestamp(),
         });
-        print('friend request sent');
       }
-     catch (e) {
+    } catch (e) {
       emit(UserListError('Failed to send request: $e'));
     }
   }
