@@ -1,9 +1,12 @@
+import 'package:chat_bot_app/Blocss/chat_bot_screen_bloc_file/chat_even.dart';
+// import 'package:chat_bot_app/Blocss/chat_event.dart';
+import 'package:chat_bot_app/Blocss/chat_state.dart';
 import 'package:chat_bot_app/Service/firebase_services.dart';
 import 'package:chat_bot_app/Service/gemini_service.dart';
 import 'package:chat_bot_app/modelss/message.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'chat_event.dart';
-import 'chat_state.dart';
+// import 'chat_event.dart';
+// import 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final GeminiService geminiService;

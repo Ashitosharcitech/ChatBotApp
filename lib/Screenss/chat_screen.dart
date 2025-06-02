@@ -122,17 +122,25 @@
 
 import 'dart:math';
 
-import 'package:chat_bot_app/Blocss/chat_bloc.dart';
-import 'package:chat_bot_app/Blocss/chat_event.dart';
+// import 'package:chat_bot_app/Blocss/chat_bloc.dart';
+import 'package:chat_bot_app/Blocss/chat_bot_screen_bloc_file/chat_bloc.dart';
+import 'package:chat_bot_app/Blocss/chat_bot_screen_bloc_file/chat_even.dart';
+// import 'package:chat_bot_app/Blocss/chat_event.dart';
 import 'package:chat_bot_app/Blocss/chat_state.dart';
 import 'package:chat_bot_app/Screenss/chat_session_loader.dart';
+import 'package:chat_bot_app/Screenss/chating_screens/friend_list_screen.dart';
+import 'package:chat_bot_app/Screenss/chating_screens/friend_requests_screen.dart';
+import 'package:chat_bot_app/Screenss/chating_screens/login_screen.dart';
+import 'package:chat_bot_app/Screenss/chating_screens/user_list_screen.dart';
+// import 'package:chat_bot_app/Screenss/login_screen.dart';
+import 'package:chat_bot_app/Screenss/signup_screen.dart';
+import 'package:chat_bot_app/Service/auth_service.dart';
 import 'package:chat_bot_app/Service/firebase_services.dart';
 import 'package:chat_bot_app/modelss/message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../utils/text_utils.dart'; // adjust the path if needed
-import 'package:chat_bot_app/Service/auth_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? previousUserMessage;
@@ -140,7 +148,9 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     Key? key,
     this.previousUserMessage,
-    this.previousBotResponse, required friendId, required String chatId,
+    this.previousBotResponse,
+    required friendId,
+    required String chatId,
   }) : super(key: key);
 
   @override
@@ -247,15 +257,79 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.only(top: 80, left: 16, right: 16),
+                    padding: const EdgeInsets.only(
+                      top: 80,
+                      left: 16,
+                      right: 16,
+                    ),
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          'All History',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'All History',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              icon: const Icon(
+                                Icons.menu_rounded,
+                              ), // You can use any icon here
+                              onSelected: (value) {
+                                Navigator.of(
+                                  context,
+                                ).pop(); // Close the drawer first
+                                switch (value) {
+                                  case 'users':
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => UserListScreen(),
+                                      ),
+                                    );
+                                    break;
+                                  case 'requests':
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => FriendRequestScreen(),
+                                      ),
+                                    );
+                                    break;
+                                  case 'friends':
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => FriendListScreen(),
+                                      ),
+                                    );
+                                    break;
+                                }
+                              },
+                              itemBuilder:
+                                  (context) => [
+                                    const PopupMenuItem(
+                                      value: 'users',
+                                      child: Text('All Users'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'requests',
+                                      child: Text('Friend Requests'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'friends',
+                                      child: Text('Friends'),
+                                    ),
+                                  ],
+                            ),
+                          ],
                         ),
                       ),
+
                       ...sessions.map((session) {
                         return Column(
                           children: [
@@ -266,10 +340,16 @@ class _ChatScreenState extends State<ChatScreen> {
                               // tileColor: Colors.grey[100],
                               title: Text(
                                 session['title'] ?? 'Unnamed Session',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 20,),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 20,
+                              ),
                               onTap: () {
+                                Navigator.of(context).pop();
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -284,23 +364,34 @@ class _ChatScreenState extends State<ChatScreen> {
                             const SizedBox(height: 10),
                           ],
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
                 const Divider(),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: ListTile(
-                  leading: const Icon(Icons.logout),
-                  title: const Text("Logout"),
-                  onTap: () async{
-                    await AuthService().signOut();
-                    Navigator.of(context).pop();
-                    // Optionally navigate to login screen
-                // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
-                  },
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: const Text("Logout"),
+                    // onTap: () async {
+                    //   await AuthService().signOut();
+                    //   // Navigator.of(context).pop();
+                    //   // Optionally navigate to login screen
+                    //   Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SignupScreen()));
+                    // },
+                    onTap: () async {
+                      await AuthService().signOut();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => LoginScreen()),
+                      );
+                    },
+                  ),
                 ),
-                )
               ],
             );
           },

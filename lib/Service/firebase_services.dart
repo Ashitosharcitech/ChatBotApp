@@ -51,4 +51,6 @@ class FirebaseService {
         .map((doc) => doc.data() as Map<String, dynamic>)
         .toList();
   }
+
+  getSessionMessages(String sessionId) {}
 }

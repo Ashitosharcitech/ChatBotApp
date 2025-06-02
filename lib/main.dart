@@ -1,7 +1,11 @@
 import 'dart:math';
 
-import 'package:chat_bot_app/Blocss/chat_bloc.dart';
+// import 'package:chat_bot_app/Blocss/chat_bloc.dart';
+import 'package:chat_bot_app/Blocss/chat_bot_screen_bloc_file/chat_bloc.dart';
 import 'package:chat_bot_app/Screenss/chat_screen.dart';
+import 'package:chat_bot_app/Screenss/chating_screens/login_screen.dart';
+// import 'package:chat_bot_app/Screenss/login_screen.dart';
+import 'package:chat_bot_app/Screenss/signup_screen.dart';
 import 'package:chat_bot_app/Service/auth_service.dart';
 import 'package:chat_bot_app/Service/firebase_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,7 +17,6 @@ import 'Service/gemini_service.dart';
 // import 'Service/firebase_service.dart';
 // import 'screens/chat_screen.dart'; // or whatever your main screen is
 
-import 'package:chat_bot_app/Screenss/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

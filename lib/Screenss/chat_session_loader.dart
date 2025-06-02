@@ -1,6 +1,7 @@
-  import 'package:flutter/material.dart';
+  import 'package:chat_bot_app/Blocss/chat_bot_screen_bloc_file/chat_bloc.dart';
+import 'package:flutter/material.dart';
   import 'package:flutter_bloc/flutter_bloc.dart';
-  import 'package:chat_bot_app/Blocss/chat_bloc.dart';
+
   import 'package:chat_bot_app/Blocss/chat_state.dart';
   import 'package:chat_bot_app/Service/firebase_services.dart';
   import 'package:chat_bot_app/Screenss/chat_screen.dart';
@@ -29,3 +30,40 @@ class ChatSessionLoader extends StatelessWidget {
     );
   }
 }
+
+
+//   import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:flutter/material.dart';
+//   import 'package:flutter_bloc/flutter_bloc.dart';
+//   import 'package:chat_bot_app/Blocss/chat_bloc.dart';
+//   import 'package:chat_bot_app/Blocss/chat_state.dart';
+//   import 'package:chat_bot_app/Service/firebase_services.dart';
+//   import 'package:chat_bot_app/Screenss/chat_screen.dart';
+// class ChatSessionLoader extends StatelessWidget {
+//   final String sessionId;
+//   const ChatSessionLoader({super.key, required this.sessionId});
+// @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: Text("Chat History")),
+//       body: FutureBuilder(
+//         future: FirebaseService().getSessionMessages(sessionId),
+//         builder: (context, snapshot) {
+//           if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+//           final messages = snapshot.data as List<Map<String, dynamic>>;
+
+//           return ListView.builder(
+//             itemCount: messages.length,
+//             itemBuilder: (context, index) {
+//               final message = messages[index];
+//               return ListTile(
+//                 title: Text(message['content']),
+//                 subtitle: Text(message['sender'] == FirebaseAuth.instance.currentUser!.uid ? 'You' : 'Bot'),
+//               );
+//             },
+//           );
+//         },
+//       ),
+//     );
+//   }
+// }

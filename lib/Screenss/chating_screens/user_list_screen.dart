@@ -1,42 +1,57 @@
-import 'package:flutter/material.dart';
+// 
+
+import 'package:chat_bot_app/users_bloc/user_list.bloc.dart';
+import 'package:chat_bot_app/users_bloc/user_list_event.dart';
+import 'package:chat_bot_app/users_bloc/user_list_state.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class UserListScreen extends StatelessWidget {
-  final currentUser = FirebaseAuth.instance.currentUser;
-
-  void sendFriendRequest(String toUserId) {
-    FirebaseFirestore.instance.collection('friend_requests').add({
-      'from': currentUser!.uid,
-      'to': toUserId,
-      'status': 'pending',
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('All Users')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return CircularProgressIndicator();
-          final users = snapshot.data!.docs;
-          return ListView.builder(
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              if (user.id == currentUser!.uid) return Container();
-              return ListTile(
-                title: Text(user['name']),
-                trailing: ElevatedButton(
-                  onPressed: () => sendFriendRequest(user.id),
-                  child: Text('Send Request'),
-                ),
+    return BlocProvider(
+      create: (_) => UserListBloc()..add(LoadUsersEvent()),
+      child: Scaffold(
+        appBar: AppBar(title: Text('All Users')),
+        body: BlocBuilder<UserListBloc, UserListState>(
+          builder: (context, state) {
+            if (state is UserListLoading) {
+              return Center(child: CircularProgressIndicator());
+            } else if (state is UserListLoaded) {
+              return ListView.builder(
+                itemCount: state.users.length,
+                itemBuilder: (context, index) {
+                  final user = state.users[index];
+                  return ListTile(
+                    title: Text(user['name']),
+                    subtitle: Text(user['email']),
+                    trailing: ElevatedButton(
+                      onPressed: () async{
+                        final currentUser = FirebaseAuth.instance.currentUser;
+                        final currentUserDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(currentUser!.uid)
+                        .get();
+                        final fromName = currentUserDoc['name'] ?? 'Unknown';
+                         print('Sending friend request from: $fromName'); // ✅ DEBUG
+                        context
+                            .read<UserListBloc>()
+                            .add(SendFriendRequestEvent(user['id'], fromName),
+                            );
+                      },
+                      child: Text('Send Request'),
+                    ),
+                  );
+                },
               );
-            },
-          );
-        },
+            } else if (state is UserListError) {
+              return Center(child: Text(state.message));
+            }
+            return Center(child: Text('No users found'));
+          },
+        ),
       ),
     );
   }
